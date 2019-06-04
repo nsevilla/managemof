@@ -12,6 +12,7 @@ import os
 import sys
 from optparse import OptionParser
 
+printout = False
 bands = ['g','r','i','z']
 onedim_cols = ['id','number','NUMBER','fofid','fof_id','coadd_run','flags','time_last_fit','box_size','bdf_flags','obj_flags','mask_frac','masked_frac','psf_T','psfrec_T','cm_flags','cm_T','cm_T_err','cm_T_s2n','cm_weight','cm_max_flags','cm_max_T','cm_max_T_err','cm_max_T_s2n','cm_s2n_w','cm_chi2per','cm_dof','cm_flags_r','cm_s2n_r','cm_T_r','cm_psf_T_r','cm_fracdev','cm_fracdev_noclip','cm_fracdec_err','cm_TdByTe','cm_TdByTe_noclip','cm_mof_flags','cm_mof_num_itr','fofind','ra','dec','bdf_nfev','bdf_s2n','bdf_T','bdf_T_err','bdf_T_ratio','bdf_fracdev','bdf_fracdev_err','flagstr']
 onedim_cols_addband = ['FLAGS','MAG_AUTO','X_IMAGE','Y_IMAGE','XWIN_IMAGE','YWIN_IMAGE','ERRAWIN_IMAGE','ERRBWIN_IMAGE','ERRTHETAWIN_IMAGE','ALPHAWIN_J2000','DELTAWIN_J2000','A_IMAGE','B_IMAGE','A_WORLD','B_WORLD','XMIN_IMAGE','XMAX_IMAGE','YMIN_IMAGE','YMAX_IMAGE','THETA_J2000','FLUX_RADIUS','IMAFLAGS_ISO','FLUX_AUTO','FLUXERR_AUTO','MAGERR_AUTO','KRON_RADIUS','BACKGROUND','THRESHOLD','FWHM_IMAGE','FWHM_WORLD']
@@ -308,25 +309,26 @@ def merge(tilename, filelist, out_dir):
 
     for f,fname in enumerate(filelist):
         flatname = os.path.splitext(fname)[0]+'_flat.fits'
+        print 'Merging',flatname
         if f == 0:
-            merged = Table.read(out_dir+flatname,format='fits')
+            merged = Table.read(os.path.join(out_dir,flatname),format='fits')
         else:
-            t = Table.read(out_dir+flatname,format='fits')
-            print 'Merging',fname
+            t = Table.read(os.path.join(out_dir,flatname),format='fits')
             merged = join(t,merged,keys='NUMBER')
 
     if tilename == '':
-        merged.write(out_dir+'merged.fits',format='fits',overwrite=True)
+        merged.write(os.path.join(out_dir,'merged.fits'),format='fits',overwrite=True)
+        print 'Wrote',os.path.join(out_dir,'merged.fits')
     else:
-        merged.write(out_dir+tilename+'_merged.fits',format='fits',overwrite=True)
-
+        merged.write(os.path.join(out_dir,tilename+'_merged.fits'),format='fits',overwrite=True)
+        print 'Wrote',os.path.join(out_dir,tilename+'_merged.fits')
 
 def flatten(data_dir, filelist, out_dir, tilename):
 
     for d,data_file in enumerate(filelist):
 
-        print data_file 
-        data_hdu = fits.open(data_dir+data_file)
+        print 'Flattening',data_file 
+        data_hdu = fits.open(os.path.join(data_dir,data_file))
         data_tab = data_hdu[1].data
 
         defs = {}
@@ -357,7 +359,8 @@ def flatten(data_dir, filelist, out_dir, tilename):
         for i in xrange(len(names)):
             nm = names[i].split('_')[len(names[i].split('_'))-1]
             strip = len(nm)
-            print 'Checking',names[i],strip
+            if printout:
+                print 'Checking',names[i],strip
             check_cols,colname = check_name(names[i],onedim_cols,prev_colname,0)
             check_band_cols,colname_band = check_name(names[i],band_cols,prev_colname_band,strip+1)
             check_bidim_cols,colname_bidim = check_name(names[i],bidim_cols,prev_colname_bidim,strip+1)
@@ -365,7 +368,8 @@ def flatten(data_dir, filelist, out_dir, tilename):
             check_multi_cols,colname_multi = check_name(names[i],multi_cols,prev_colname_multi,strip+1)
             check_cols_add,colname_add = check_name(names[i],onedim_cols_addband,prev_colname_add,0)
             check_multi_cols_add,colname_multi_add = check_name(names[i],multi_cols_add,prev_colname_multi_add,strip+1)
-            print check_cols,check_band_cols,check_bidim_cols,check_bidim_band_cols,check_multi_cols,check_cols_add,check_multi_cols_add
+            if printout:
+                print check_cols,check_band_cols,check_bidim_cols,check_bidim_band_cols,check_multi_cols,check_cols_add,check_multi_cols_add
             if i == 0:
                 n = 0
                 m = 0
@@ -445,6 +449,7 @@ def flatten(data_dir, filelist, out_dir, tilename):
         new_tbdata = new_hdu.data
         new_hdu = fits.BinTableHDU(data=new_tbdata)
         out_file = os.path.join(out_dir,os.path.splitext(data_file)[0]+'_flat.fits')
+        print 'Wrote',out_file
         new_hdu.writeto(out_file,clobber='True')
 
     return 
@@ -490,8 +495,8 @@ def main():
         print 'Missing file of one of these types:',check_string
         sys.exit()
 
-    if tilename != '':
-        print 'Processing tile',tilename
+    #if tilename != '':
+    #    print 'Processing tile',tilename
 
     #build flattened catalogs
     flatten(options.data_dir,select_files,options.out_dir,tilename)
